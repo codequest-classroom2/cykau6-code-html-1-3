@@ -221,4 +221,16 @@ Now modify this code to make it YOUR own!
 
 ## AI Feedback
 
-> ⏳ No feedback yet — submit your work using the coding environment to get AI feedback!
+**⚠️ MISSION INCOMPLETE**
+
+**Points: 0 | Total XP: 10**
+
+*Last reviewed: 2026-04-22 17:47 UTC*
+
+### Results
+
+- ❌ Add an <a> link with href attribute **Link (anchor tag)**
+- ❌ Add an <img> tag with src attribute **Image** — *Must have an image tag <img> with src*
+- ❌ Add alt text to your image for accessibility **Image alt text**
+
+[View your Progress Tree](https://codequest-classroom2.github.io/cykau6-code)
