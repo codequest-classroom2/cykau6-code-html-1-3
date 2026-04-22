@@ -1,0 +1,41 @@
+# Netlify configuration for CodeQuest
+# Docs: https://docs.netlify.com/configure-builds/file-based-configuration/
+#
+# This repo serves two purposes depending on which Netlify site it is
+# connected to:
+#
+#   codequest-oauth.netlify.app  — central OAuth callback service
+#     The /callback route below routes GitHub's redirect to callback.js, which
+#     exchanges the code for a token and redirects students back to submit.html.
+#     Register https://codequest-oauth.netlify.app/callback as the redirect_uri
+#     in your GitHub OAuth App settings.
+#
+#   per-student mission sites  — static coding environment
+#     Each student's repo is deployed here; submit.html is the coding UI.
+
+[build]
+  publish   = "."
+  functions = "netlify/functions"
+
+[functions]
+  # Node 18 ships the global fetch API used by both serverless functions.
+  node_bundler = "esbuild"
+
+# ── Central OAuth callback (codequest-oauth.netlify.app) ──────────────────────
+# GitHub redirects to https://codequest-oauth.netlify.app/callback after the
+# student authorises (or denies) the app.
+[[redirects]]
+  from   = "/callback"
+  to     = "/.netlify/functions/callback"
+  status = 200
+
+# ── Per-student coding environment ────────────────────────────────────────────
+[[redirects]]
+  from   = "/play"
+  to     = "/basic-web-mission/submit.html"
+  status = 200
+
+[dev]
+  # `netlify dev` starts a local server on this port and emulates functions.
+  # Test the callback locally: http://localhost:8888/callback?code=…&state=…
+  port = 8888

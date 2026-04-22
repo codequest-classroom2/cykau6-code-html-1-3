@@ -1,0 +1,26 @@
+{
+  "id": "{{mission_id}}",
+  "title": "{{mission.title}}",
+  "description": "{{mission.description}}",
+  "instructions": "{{mission.instructions}}",
+  "points": 10,
+  "badge": "{{mission.badge}}",
+  "level": "{{mission.level}}",
+  "language": "html",
+  "starterCode": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <title>My Page</title>\n  <style>\n    body { font-family: sans-serif; padding: 24px; }\n  </style>\n</head>\n<body>\n  <!-- Write your code here -->\n  <h1>Hello, World!</h1>\n</body>\n</html>",
+  "videoId": "",
+  "lessons": [
+    {
+      "title": "Step 1 — Understand the structure",
+      "content": "Every HTML page starts with <!DOCTYPE html> to tell the browser what kind of document this is.\n\nThen comes the <html> tag, which wraps everything.\n\nInside, <head> holds invisible settings (title, styles) and <body> holds everything the visitor actually sees."
+    }
+  ],
+  "requirements": [
+    "{{requirement_1}}",
+    "{{requirement_2}}"
+  ],
+  "repoOwner": "{{repo_owner}}",
+  "repoName": "{{repo_name}}",
+  "githubClientId": "Ov23liQDq3Zot4YJncUU",
+  "oauthCallbackUrl": "https://codequest-oauth.netlify.app/callback"
+}

@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeQuest Mission</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --accent:    #58a6ff;
+      --green:     #3fb950;
+      --orange:    #f78166;
+      --text:      #c9d1d9;
+      --muted:     #8b949e;
+      --header-h:  48px;
+      --footer-h:  56px;
+      --left-w:    300px;
+      --right-w:   380px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; overflow: hidden; }
+
+    /* ── Header ── */
+    #header {
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; gap: 12px; flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo { font-weight: 700; font-size: 15px; color: var(--accent); white-space: nowrap; }
+    #mission-title { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    #save-status { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+    /* ── Panels ── */
+    #panels {
+      display: grid;
+      grid-template-columns: var(--left-w) 1fr var(--right-w);
+      height: calc(100vh - var(--header-h) - var(--footer-h));
+      overflow: hidden;
+    }
+
+    /* ── Left sidebar ── */
+    #panel-left {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+    #panel-left::-webkit-scrollbar { width: 6px; }
+    #panel-left::-webkit-scrollbar-track { background: transparent; }
+    #panel-left::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .video-wrap { width: 100%; aspect-ratio: 16/9; background: #000; flex-shrink: 0; }
+    .video-wrap iframe { width: 100%; height: 100%; border: none; display: block; }
+    .no-video { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 12px; }
+
+    .sidebar-section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .sidebar-section:last-child { border-bottom: none; }
+
+    details.lesson { margin-bottom: 8px; }
+    details.lesson:last-child { margin-bottom: 0; }
+    details.lesson summary {
+      cursor: pointer; list-style: none; display: flex; align-items: center; gap: 6px;
+      font-weight: 600; font-size: 13px; color: var(--text); padding: 6px 0;
+      user-select: none;
+    }
+    details.lesson summary::-webkit-details-marker { display: none; }
+    details.lesson summary::before { content: '▶'; font-size: 10px; color: var(--muted); transition: transform 0.15s; }
+    details.lesson[open] summary::before { transform: rotate(90deg); }
+    details.lesson .lesson-body { padding: 8px 0 4px 16px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    details.lesson .lesson-body pre {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+      padding: 10px 12px; margin: 8px 0; overflow-x: auto; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; color: var(--text);
+    }
+
+    .section-title { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 10px; }
+
+    .checklist-item { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; font-size: 13px; color: var(--text); cursor: pointer; }
+    .checklist-item input[type="checkbox"] { margin-top: 2px; accent-color: var(--green); flex-shrink: 0; }
+    .checklist-item.done label { text-decoration: line-through; color: var(--muted); }
+
+    /* ── Middle — Editor ── */
+    #panel-middle { display: flex; flex-direction: column; overflow: hidden; }
+    .panel-toolbar {
+      height: 36px; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 12px; flex-shrink: 0;
+    }
+    .panel-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    #autosave-indicator { font-size: 11px; color: var(--muted); }
+    #monaco-container { flex: 1; overflow: hidden; }
+
+    /* ── Right — Preview ── */
+    #panel-right { display: flex; flex-direction: column; border-left: 1px solid var(--border); overflow: hidden; }
+    #preview-frame { flex: 1; border: none; background: #fff; }
+
+    /* ── Footer ── */
+    #footer {
+      height: var(--footer-h);
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0;
+    }
+    #submit-status { font-size: 13px; color: var(--muted); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 14px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--green); color: #0d1117; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .btn-github { background: #24292f; color: #fff; border: 1px solid var(--border); }
+    .btn:not(:disabled):hover { opacity: 0.85; }
+
+    /* ── AI Feedback panel ── */
+    #feedback-section {
+      position: fixed; bottom: var(--footer-h); right: 0;
+      width: var(--right-w); max-height: 50vh; overflow-y: auto;
+      background: var(--surface); border: 1px solid var(--border); border-right: none; border-bottom: none;
+      border-radius: 8px 0 0 0; padding: 16px; z-index: 100;
+      box-shadow: -4px -4px 20px rgba(0,0,0,0.4);
+    }
+    #feedback-section h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; color: var(--accent); }
+    #feedback-content { font-size: 13px; line-height: 1.7; }
+    #feedback-content .pass { color: var(--green); }
+    #feedback-content .fail { color: var(--orange); }
+    #feedback-content .fb-status { font-size: 15px; font-weight: 700; padding: 6px 0 2px; }
+    #feedback-content .fb-passed { color: var(--green); }
+    #feedback-content .fb-failed { color: var(--orange); }
+    #feedback-content .fb-meta   { color: var(--fg); font-weight: 600; margin: 2px 0; }
+    #feedback-content .fb-ts     { color: var(--muted); font-size: 11px; margin-bottom: 6px; }
+    #feedback-content .fb-heading { font-weight: 700; margin: 6px 0 2px; text-transform: uppercase; font-size: 11px; letter-spacing: .05em; color: var(--muted); }
+    #feedback-content .fb-link   { margin-top: 8px; }
+    #feedback-content .fb-gap    { height: 4px; }
+    .feedback-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+  </style>
+</head>
+<body>
+
+<div id="header">
+  <div class="header-left">
+    <span class="logo">⚔️ CodeQuest</span>
+    <span id="mission-title">Loading mission…</span>
+  </div>
+  <div class="header-right">
+    <span id="save-status"></span>
+    <button id="auth-btn" class="btn btn-github" onclick="handleAuth()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Login with GitHub
+    </button>
+  </div>
+</div>
+
+<div id="panels">
+  <!-- Left: tutorial sidebar -->
+  <aside id="panel-left">
+    <div class="video-wrap" id="video-wrap">
+      <div class="no-video">No tutorial video configured</div>
+    </div>
+
+    <div class="sidebar-section" id="lessons-section" style="display:none">
+      <div class="section-title">Lessons</div>
+      <div id="lessons-list"></div>
+    </div>
+
+    <div class="sidebar-section" id="checklist-section" style="display:none">
+      <div class="section-title">Checklist</div>
+      <div id="checklist-list"></div>
+    </div>
+  </aside>
+
+  <!-- Middle: Monaco Editor -->
+  <div id="panel-middle">
+    <div class="panel-toolbar">
+      <span class="panel-label">Editor</span>
+      <span id="autosave-indicator"></span>
+    </div>
+    <div id="monaco-container"></div>
+  </div>
+
+  <!-- Right: Live preview -->
+  <div id="panel-right">
+    <div class="panel-toolbar">
+      <span class="panel-label">Live Preview</span>
+      <span style="font-size:11px;color:var(--muted)">updates as you type</span>
+    </div>
+    <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin" title="Live preview"></iframe>
+  </div>
+</div>
+
+<footer id="footer">
+  <span id="submit-status"></span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="user-badge" style="font-size:12px;color:var(--muted)"></span>
+    <button id="submit-btn" class="btn btn-primary" onclick="submitWork()">🚀 Submit Mission</button>
+  </div>
+</footer>
+
+<!-- AI Feedback panel (hidden until after submit) -->
+<div id="feedback-section" style="display:none">
+  <h3>🤖 AI Feedback</h3>
+  <div id="feedback-content"></div>
+</div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script>
+'use strict';
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let editor        = null;
+let mission       = {};
+let ghToken       = null;
+let repoOwner     = null;
+let repoName      = null;
+let feedbackTimer   = null;
+let lastSavedHash   = '';
+
+// ─── Boot ────────────────────────────────────────────────────────────────────
+(async function init() {
+  mission  = await loadMission();
+  ghToken  = localStorage.getItem('codequest_gh_token');
+  detectRepo();
+  renderHeader();
+  renderSidebar();
+  initMonaco();
+  handleOAuthCallback();   // exchange ?code= if we just came back from GitHub
+  updateAuthUI();
+})();
+
+// ─── Mission config ───────────────────────────────────────────────────────────
+async function loadMission() {
+  const candidates = ['../mission.json', './mission.json', '../../mission.json'];
+  const debugLines = [
+    `page URL: ${window.location.href}`,
+    `candidates: ${JSON.stringify(candidates)}`,
+  ];
+
+  let foundPath = null;
+  let foundData = null;
+
+  for (const path of candidates) {
+    const absUrl = new URL(path, window.location.href).href;
+    console.group(`loadMission: trying ${path}`);
+    console.log('absolute URL:', absUrl);
+    debugLines.push(`\ntrying: ${path} → ${absUrl}`);
+    try {
+      const res = await fetch(absUrl);
+      console.log('HTTP status:', res.status, res.statusText);
+      debugLines.push(`  HTTP ${res.status} ${res.statusText}`);
+      if (!res.ok) {
+        console.log('skipping — non-OK response');
+        debugLines.push('  skipped (non-OK)');
+        console.groupEnd();
+        continue;
+      }
+      let data;
+      try {
+        data = await res.json();
+        console.log('parsed JSON:', data);
+        debugLines.push(`  parsed JSON: ${JSON.stringify(data, null, 2)}`);
+      } catch (jsonErr) {
+        console.error('JSON parse error:', jsonErr);
+        debugLines.push(`  JSON parse error: ${jsonErr}`);
+        console.groupEnd();
+        continue;
+      }
+      if (data.githubClientId) {
+        console.log(`githubClientId found: ${data.githubClientId}`);
+        debugLines.push(`  githubClientId: ${data.githubClientId}  ← FOUND`);
+        foundPath = path;
+        foundData = data;
+        console.groupEnd();
+        break;
+      } else {
+        console.warn('githubClientId missing from this file — keys present:', Object.keys(data));
+        debugLines.push(`  githubClientId: (missing) — keys: ${Object.keys(data).join(', ')}`);
+      }
+    } catch (err) {
+      console.error('fetch error:', err);
+      debugLines.push(`  fetch error: ${err}`);
+    }
+    console.groupEnd();
+  }
+
+  if (!foundData) {
+    console.warn('Could not load mission.json with githubClientId from any path — using defaults.');
+    debugLines.push('\nResult: no githubClientId found — using defaults');
+    showDebugPanel(debugLines, null, null);
+    return {};
+  }
+
+  console.log(`Loaded mission.json from ${foundPath}`);
+  debugLines.push(`\nResult: loaded from ${foundPath}, githubClientId = ${foundData.githubClientId}`);
+  showDebugPanel(debugLines, foundPath, foundData.githubClientId);
+  return foundData;
+}
+
+function showDebugPanel(lines, foundPath, clientId) {
+  const panel = document.createElement('div');
+  panel.id = 'debug-panel';
+  Object.assign(panel.style, {
+    position: 'fixed', top: '0', right: '0', zIndex: '9999',
+    background: '#1c1c1c', color: '#e0e0e0', border: '1px solid #f0a500',
+    borderRadius: '0 0 0 8px', padding: '10px 14px', maxWidth: '480px',
+    maxHeight: '60vh', overflowY: 'auto', fontSize: '12px',
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace", lineHeight: '1.5',
+  });
+
+  const pathHtml  = foundPath
+    ? `<span style="color:#3fb950">✅ ${escHtml(foundPath)}</span>`
+    : `<span style="color:#f78166">❌ not found</span>`;
+  const idHtml = clientId
+    ? `<span style="color:#3fb950">${escHtml(clientId)}</span>`
+    : `<span style="color:#f78166">missing</span>`;
+
+  panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <strong style="color:#f0a500">mission.json debug</strong>
+      <button onclick="document.getElementById('debug-panel').remove()"
+        style="background:none;border:none;color:#8b949e;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <div style="margin-bottom:4px">path found: ${pathHtml}</div>
+    <div style="margin-bottom:8px">githubClientId: ${idHtml}</div>
+    <details>
+      <summary style="cursor:pointer;color:#8b949e">full log</summary>
+      <pre style="white-space:pre-wrap;margin-top:6px;color:#c9d1d9">${escHtml(lines.join('\n'))}</pre>
+    </details>`;
+
+  document.body.appendChild(panel);
+}
+
+// ─── Repo detection ───────────────────────────────────────────────────────────
+function detectRepo() {
+  // 1. Explicit in mission.json
+  if (mission.repoOwner && mission.repoName) {
+    repoOwner = mission.repoOwner;
+    repoName  = mission.repoName;
+    return;
+  }
+  // 2. GitHub Pages URL: https://{owner}.github.io/{repo}/...
+  const host = window.location.hostname;
+  const parts = window.location.pathname.split('/').filter(Boolean);
+  if (host.endsWith('.github.io')) {
+    repoOwner = host.replace('.github.io', '');
+    repoName  = parts[0] || '';
+  }
+}
+
+// ─── UI rendering ─────────────────────────────────────────────────────────────
+function renderHeader() {
+  document.title = mission.title ? `CodeQuest — ${mission.title}` : 'CodeQuest';
+  document.getElementById('mission-title').textContent = mission.title || 'Mission';
+}
+
+function renderSidebar() {
+  // YouTube video
+  if (mission.videoId) {
+    document.getElementById('video-wrap').innerHTML =
+      `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(mission.videoId)}?rel=0"
+               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+               allowfullscreen></iframe>`;
+  }
+
+  // Collapsible lesson sections
+  const lessons = mission.lessons || [];
+  if (lessons.length) {
+    const list = document.getElementById('lessons-list');
+    list.innerHTML = lessons.map((l, i) => `
+      <details class="lesson" ${i === 0 ? 'open' : ''}>
+        <summary>${escHtml(l.title || `Lesson ${i + 1}`)}</summary>
+        <div class="lesson-body">${renderLessonBody(l.content || '')}</div>
+      </details>`).join('');
+    document.getElementById('lessons-section').style.display = '';
+  }
+
+  // Checklist
+  const reqs = mission.requirements || [];
+  if (reqs.length) {
+    const list = document.getElementById('checklist-list');
+    list.innerHTML = reqs.map((r, i) => `
+      <div class="checklist-item" id="ci-${i}">
+        <input type="checkbox" id="chk-${i}" onchange="toggleCheck(${i})">
+        <label for="chk-${i}">${escHtml(r)}</label>
+      </div>`).join('');
+    document.getElementById('checklist-section').style.display = '';
+  }
+}
+
+function renderLessonBody(content) {
+  // Basic: wrap code fences, escape rest
+  return content
+    .split(/```([\s\S]*?)```/)
+    .map((part, i) => i % 2 === 1
+      ? `<pre>${escHtml(part.trim())}</pre>`
+      : escHtml(part))
+    .join('');
+}
+
+function toggleCheck(i) {
+  const item = document.getElementById(`ci-${i}`);
+  item.classList.toggle('done', document.getElementById(`chk-${i}`).checked);
+}
+
+// ─── Monaco Editor ────────────────────────────────────────────────────────────
+function initMonaco() {
+  require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+  require(['vs/editor/editor.main'], () => {
+    const lang = mission.language || 'html';
+
+    // Restore draft from localStorage first, then mission starterCode
+    const draftKey = `codequest_draft_${mission.id || 'default'}`;
+    const draft    = localStorage.getItem(draftKey);
+    const initial  = draft || mission.starterCode || defaultStarter(lang);
+
+    editor = monaco.editor.create(document.getElementById('monaco-container'), {
+      value:            initial,
+      language:         lang,
+      theme:            'vs-dark',
+      fontSize:         14,
+      fontFamily:       "'JetBrains Mono', 'Fira Code', Consolas, monospace",
+      minimap:          { enabled: false },
+      scrollBeyondLastLine: false,
+      wordWrap:         'on',
+      automaticLayout:  true,
+      tabSize:          2,
+    });
+
+    lastSavedHash = hashCode(initial);
+    updatePreview(initial);
+
+    // Live preview on every keystroke
+    editor.onDidChangeModelContent(() => {
+      const code = editor.getValue();
+      updatePreview(code);
+    });
+
+    // Autosave to localStorage every 30 s
+    setInterval(() => autosave(draftKey), 30_000);
+
+    // Save on page hide (tab close / navigate away)
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') autosave(draftKey);
+    });
+
+    if (draft) {
+      document.getElementById('autosave-indicator').textContent = '📂 Draft restored';
+      setTimeout(() => { document.getElementById('autosave-indicator').textContent = ''; }, 3000);
+    }
+  });
+}
+
+function autosave(key) {
+  if (!editor) return;
+  const code = editor.getValue();
+  const h    = hashCode(code);
+  if (h === lastSavedHash) return;
+  localStorage.setItem(key, code);
+  lastSavedHash = h;
+  const el = document.getElementById('autosave-indicator');
+  el.textContent = `💾 Saved ${new Date().toLocaleTimeString()}`;
+  setTimeout(() => { if (el.textContent.startsWith('💾')) el.textContent = ''; }, 3000);
+}
+
+function defaultStarter(lang) {
+  if (lang === 'html') return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Page</title>
+  <style>
+    body { font-family: sans-serif; padding: 24px; }
+  </style>
+</head>
+<body>
+  <!-- Write your code here -->
+  <h1>Hello, World!</h1>
+</body>
+</html>`;
+  if (lang === 'css') return `/* Write your CSS here */\nbody {\n  font-family: sans-serif;\n}\n`;
+  if (lang === 'javascript' || lang === 'js') return `// Write your JavaScript here\nconsole.log('Hello, World!');\n`;
+  return '<!-- Write your code here -->\n';
+}
+
+// ─── Live preview ─────────────────────────────────────────────────────────────
+function updatePreview(code) {
+  const frame = document.getElementById('preview-frame');
+  const lang  = mission.language || 'html';
+  let html    = code;
+  if (lang === 'css')        html = `<style>${code}</style><p>CSS preview</p>`;
+  if (lang === 'javascript') html = `<script>${code}<\/script>`;
+  const blob = new Blob([html], { type: 'text/html' });
+  const old  = frame.src;
+  frame.src  = URL.createObjectURL(blob);
+  if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
+}
+
+// ─── Auth UI ──────────────────────────────────────────────────────────────────
+function updateAuthUI() {
+  const btn    = document.getElementById('auth-btn');
+  const badge  = document.getElementById('user-badge');
+  const user   = localStorage.getItem('codequest_gh_user');
+  if (ghToken) {
+    btn.textContent  = '🔓 Logged in' + (user ? ` as @${user}` : '');
+    btn.className    = 'btn btn-secondary';
+    if (user) badge.textContent = `@${user}`;
+  } else {
+    btn.innerHTML    = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Login with GitHub`;
+    btn.className    = 'btn btn-github';
+    badge.textContent = '';
+  }
+}
+
+function handleAuth() {
+  if (ghToken) {
+    if (confirm('Log out of GitHub?')) {
+      ghToken = null;
+      localStorage.removeItem('codequest_gh_token');
+      localStorage.removeItem('codequest_gh_user');
+      updateAuthUI();
+    }
+    return;
+  }
+  const clientId = mission.githubClientId;
+  if (clientId) {
+    startOAuthRedirect(clientId);
+  } else {
+    showStatus('⚠️ OAuth not configured — contact your teacher.', true);
+  }
+}
+
+// ─── OAuth — Web Application Flow (redirect → central callback) ───────────────
+//
+// Flow:
+//   1. Student clicks Login → redirected to GitHub OAuth with redirect_uri
+//      pointing at the central codequest-oauth.netlify.app/callback function.
+//   2. The callback function exchanges the code for a token server-side and
+//      redirects the student back here with #token=…&nonce=… in the hash.
+//   3. handleOAuthCallback() reads the hash, verifies the nonce, and stores
+//      the token in localStorage.  The hash is immediately removed from the URL.
+
+const OAUTH_CALLBACK_URL =
+  mission.oauthCallbackUrl || 'https://codequest-oauth.netlify.app/callback';
+
+function startOAuthRedirect(clientId) {
+  const nonce     = crypto.randomUUID();
+  // returnUrl is where the callback should send the student after the exchange.
+  // Strip any existing query/hash so we land on a clean submit.html URL.
+  const returnUrl = window.location.origin + window.location.pathname;
+
+  // Encode both the CSRF nonce and the return URL into the state parameter.
+  // The callback function decodes this to know where to redirect and what
+  // nonce to echo back for verification.
+  const state = btoa(JSON.stringify({ nonce, returnUrl }));
+
+  localStorage.setItem('codequest_oauth_nonce', nonce);
+
+  const url = 'https://github.com/login/oauth/authorize?' + new URLSearchParams({
+    client_id:    clientId,
+    scope:        'repo',
+    state:        state,
+    redirect_uri: OAUTH_CALLBACK_URL,
+  });
+  window.location.href = url;
+}
+
+function handleOAuthCallback() {
+  if (!window.location.hash || window.location.hash === '#') return;
+
+  const hash  = new URLSearchParams(window.location.hash.slice(1));
+  const token = hash.get('token');
+  const nonce = hash.get('nonce');
+  const err   = hash.get('oauth_error');
+
+  // Nothing OAuth-related in the hash — leave early without touching the URL.
+  if (!token && !err) return;
+
+  // Scrub the hash immediately so the token doesn't linger in the browser bar
+  // or history, and isn't visible if the student shares their screen.
+  window.history.replaceState({}, '', window.location.pathname + window.location.search);
+
+  if (err) {
+    showStatus('❌ GitHub login failed: ' + err, true);
+    return;
+  }
+
+  // Verify the nonce to guard against token-injection attacks (a malicious page
+  // redirecting here with a token it controls).
+  const savedNonce = localStorage.getItem('codequest_oauth_nonce');
+  if (nonce && savedNonce && nonce !== savedNonce) {
+    showStatus('⚠️ Security check failed — please try logging in again.', true);
+    localStorage.removeItem('codequest_oauth_nonce');
+    return;
+  }
+  localStorage.removeItem('codequest_oauth_nonce');
+
+  storeToken(token);
+}
+
+async function storeToken(token) {
+  ghToken = token;
+  localStorage.setItem('codequest_gh_token', token);
+  // Fetch the authenticated user to display their name
+  try {
+    const res  = await fetch('https://api.github.com/user', { headers: { Authorization: `token ${token}` } });
+    const user = await res.json();
+    if (user.login) {
+      localStorage.setItem('codequest_gh_user', user.login);
+      // Auto-fill repoOwner if not set
+      if (!repoOwner) repoOwner = user.login;
+    }
+  } catch { /* ignore */ }
+  updateAuthUI();
+  showStatus('✅ Logged in to GitHub!');
+}
+
+// ─── Submit ───────────────────────────────────────────────────────────────────
+async function submitWork() {
+  if (!editor) { showStatus('⏳ Editor still loading…', true); return; }
+  if (!ghToken) {
+    showStatus('⚠️ Login with GitHub first.', true);
+    const clientId = mission.githubClientId;
+    if (clientId) startOAuthRedirect(clientId);
+    else showStatus('⚠️ OAuth not configured — contact your teacher.', true);
+    return;
+  }
+  if (!repoOwner || !repoName) { showStatus('⚠️ Cannot determine repo. Set repoOwner/repoName in mission.json.', true); return; }
+
+  const btn  = document.getElementById('submit-btn');
+  btn.disabled = true;
+  showStatus('📤 Submitting…');
+
+  const code     = editor.getValue();
+  const path     = 'submissions/index.html';
+  const apiBase  = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${path}`;
+  const headers  = { Authorization: `token ${ghToken}`, 'Content-Type': 'application/json' };
+
+  try {
+    // Get existing file SHA (if file already exists)
+    let sha;
+    const getRes = await fetch(apiBase, { headers });
+    if (getRes.ok) sha = (await getRes.json()).sha;
+
+    // Encode content as base64 (handle Unicode)
+    const encoded = btoa(unescape(encodeURIComponent(code)));
+    const body    = { message: '🚀 Submit mission work', content: encoded };
+    if (sha) body.sha = sha;
+
+    const putRes = await fetch(apiBase, { method: 'PUT', headers, body: JSON.stringify(body) });
+    if (!putRes.ok) {
+      const err = await putRes.json();
+      throw new Error(err.message || putRes.status);
+    }
+
+    showStatus('✅ Submitted! Waiting for AI feedback…');
+    btn.textContent = '✅ Submitted';
+    startFeedbackPolling(new Date());
+  } catch (err) {
+    showStatus('❌ Submit failed: ' + err.message, true);
+    btn.disabled = false;
+  }
+}
+
+// ─── AI Feedback polling ──────────────────────────────────────────────────────
+function startFeedbackPolling(submissionTime) {
+  const section = document.getElementById('feedback-section');
+  const content = document.getElementById('feedback-content');
+  const btn     = document.getElementById('submit-btn');
+  section.style.display = '';
+  content.innerHTML = '<span class="feedback-spinner"></span> Waiting for AI checker to run…';
+
+  console.log('[feedback] Starting polling —', { repoOwner, repoName, submissionTime: submissionTime.toISOString() });
+
+  let attempts = 0;
+  const MAX    = 120;  // give up after ~6 minutes
+
+  feedbackTimer = setInterval(async () => {
+    attempts++;
+    if (attempts > MAX) {
+      clearInterval(feedbackTimer);
+      content.innerHTML = '⏰ Timed out waiting for feedback. Check the Actions tab on GitHub.';
+      btn.disabled    = false;
+      btn.textContent = '🚀 Submit Mission';
+      return;
+    }
+
+    // Append a timestamp query param so GitHub's CDN never serves a stale cached copy.
+    const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/README.md?_t=${Date.now()}`;
+    console.log(`[feedback] Poll #${attempts} — GET ${url}`);
+
+    try {
+      const res = await fetch(url, { headers: { Authorization: `token ${ghToken}` } });
+      console.log(`[feedback] Poll #${attempts} — HTTP ${res.status}`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      // Decode base64 → UTF-8 bytes → string via TextDecoder.
+      // (The old escape/decodeURIComponent trick breaks on multi-byte characters.)
+      const b64   = data.content.replace(/\s/g, '');
+      const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      const text  = new TextDecoder().decode(bytes);
+
+      console.log(`[feedback] Poll #${attempts} — README length: ${text.length} chars`);
+      console.log(`[feedback] Poll #${attempts} — README tail (last 500 chars):\n`, text.slice(-500));
+
+      // Normalise line endings so \r\n (Windows) and \n (Unix) both match.
+      const normalised = text.replace(/\r\n/g, '\n');
+
+      // Match ## AI Feedback … up to the next ## heading or end of string.
+      // s flag (dotAll) lets . cross newlines; no m flag so $ means end-of-string,
+      // preventing the lazy quantifier from stopping at the first line ending.
+      const match = normalised.match(/## AI Feedback[^\n]*\n([\s\S]*?)(?=\n## |$)/s);
+      console.log(`[feedback] Poll #${attempts} — regex match:`, match ? `section found (${match[1].length} chars)` : 'no match');
+      if (match) console.log(`[feedback] Poll #${attempts} — matched body:\n`, match[1]);
+
+      if (!match) return;
+      const body = match[1].trim();
+      if (!body || body.startsWith('> ⏳') || body.includes('No feedback yet')) {
+        console.log(`[feedback] Poll #${attempts} — feedback not ready yet`);
+        return;
+      }
+
+      // Only stop polling when the "Last reviewed:" timestamp in the feedback
+      // is newer than the moment the student clicked Submit. If the timestamp
+      // is missing, unparseable, or older than submissionTime the feedback is
+      // stale (left over from a previous attempt) — keep polling.
+      const tsMatch = body.match(/Last reviewed:\s*([^\n<]+)/i);
+      if (!tsMatch) {
+        console.log(`[feedback] Poll #${attempts} — no "Last reviewed:" timestamp found, keep polling`);
+        return;
+      }
+      // Strip markdown formatting (asterisks, backticks) before parsing — the
+      // README wraps the line in italics (*Last reviewed: …*) so the raw
+      // captured group ends with a trailing * that breaks Date parsing.
+      const tsRaw = tsMatch[1].replace(/[*`]/g, '').trim();
+      const feedbackTime = new Date(tsRaw);
+      // Accept feedback written up to 60 s before the submit click to allow
+      // for clock skew between the browser and the GitHub Actions runner.
+      if (isNaN(feedbackTime.getTime()) || feedbackTime < submissionTime - 60000) {
+        console.log(`[feedback] Poll #${attempts} — stale/unparseable feedback (reviewed "${tsRaw}" / ${feedbackTime} vs submitted ${submissionTime}), keep polling`);
+        return;
+      }
+
+      console.log('[feedback] Feedback ready — stopping poll.');
+      clearInterval(feedbackTimer);
+      renderFeedback(body);
+      btn.disabled    = false;
+      btn.textContent = '🚀 Submit Mission';
+
+      // If the mission passed, open the student's progress tree after 5 s.
+      if (body.includes('🎉 MISSION PASSED!')) {
+        // repoName is "{username}-{mission.id}", e.g. "alice-basic-web-mission"
+        const missionSuffix   = mission.id ? `-${mission.id}` : '';
+        const studentUsername = missionSuffix && repoName.endsWith(missionSuffix)
+          ? repoName.slice(0, -missionSuffix.length)
+          : repoName.split('-')[0];
+        const treeUrl = `https://${repoOwner}.github.io/${studentUsername}/`;
+        console.log(`[feedback] Mission passed — opening progress tree in 5 s: ${treeUrl}`);
+        setTimeout(() => window.open(treeUrl, '_blank'), 5000);
+      }
+    } catch (err) {
+      console.warn(`[feedback] Poll #${attempts} — error:`, err);
+    }
+  }, 3000);
+}
+
+function renderFeedback(md) {
+  // Helper: inline markdown — **bold**, *italic*, [link](url)
+  function inline(s) {
+    return s
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g,     '<em>$1</em>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  }
+
+  let html = '';
+  for (const raw of md.split('\n')) {
+    const line = raw.trimEnd();
+
+    // Status banner: **🎉 MISSION PASSED!** or **⚠️ MISSION INCOMPLETE**
+    const statusMatch = line.match(/^\*\*(.*(MISSION PASSED|MISSION INCOMPLETE).*)\*\*$/);
+    if (statusMatch) {
+      const passed = statusMatch[1].includes('PASSED');
+      html += `<div class="fb-status ${passed ? 'fb-passed' : 'fb-failed'}">${inline(line)}</div>`;
+      continue;
+    }
+
+    // Points / XP line: **Points: … | Total XP: …**
+    if (/^\*\*Points:/.test(line)) {
+      html += `<div class="fb-meta">${inline(line)}</div>`;
+      continue;
+    }
+
+    // Timestamp: *Last reviewed: …*
+    if (/^\*Last reviewed:/.test(line)) {
+      html += `<div class="fb-ts">${inline(line)}</div>`;
+      continue;
+    }
+
+    // Section heading: ### Results
+    if (/^###\s/.test(line)) {
+      html += `<div class="fb-heading">${inline(line.replace(/^###\s+/, ''))}</div>`;
+      continue;
+    }
+
+    // Pass result: - ✅ …
+    if (/^- ✅/.test(line)) {
+      html += `<div class="pass">${inline(line.replace(/^- /, ''))}</div>`;
+      continue;
+    }
+
+    // Fail result: - ❌ …
+    if (/^- ❌/.test(line)) {
+      html += `<div class="fail">${inline(line.replace(/^- /, ''))}</div>`;
+      continue;
+    }
+
+    // Generic list item
+    if (/^- /.test(line)) {
+      html += `<div>• ${inline(line.replace(/^- /, ''))}</div>`;
+      continue;
+    }
+
+    // Link-only line (progress tree)
+    if (/^\[.*\]\(.*\)$/.test(line)) {
+      html += `<div class="fb-link">${inline(line)}</div>`;
+      continue;
+    }
+
+    // Blank line → spacer
+    if (line === '') {
+      html += '<div class="fb-gap"></div>';
+      continue;
+    }
+
+    // Fallback
+    html += `<div>${inline(line)}</div>`;
+  }
+
+  document.getElementById('feedback-content').innerHTML = html;
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function showStatus(msg, isError = false) {
+  const el = document.getElementById('submit-status');
+  el.textContent   = msg;
+  el.style.color   = isError ? 'var(--orange)' : 'var(--muted)';
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function hashCode(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = Math.imul(31, h) + s.charCodeAt(i) | 0;
+  return h;
+}
+</script>
+</body>
+</html>

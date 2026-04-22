@@ -1,0 +1,76 @@
+name: CodeQuest AI Checker
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Check this is a real student repo and not a bot commit
+        id: check
+        run: |
+          # Skip unfilled template repos
+          if grep -q '{{student_username}}' identity.json 2>/dev/null; then
+            echo "⏭️ Template repo detected, skipping review."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          # Skip the bot's own feedback commits to prevent an infinite loop.
+          # review.py stamps a timestamp into README.md on every run, so without
+          # this guard the bot commit would re-trigger the workflow forever.
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if [[ "$COMMIT_MSG" == "🤖 Auto-update:"* ]]; then
+            echo "⏭️ Bot commit detected, skipping review."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: 🐍 Setup Python
+        if: steps.check.outputs.skip != 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          pip install requests
+
+      - name: 🤖 Run AI Review
+        if: steps.check.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python review.py
+
+      - name: 💾 Commit AI feedback and progress
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          git config user.name "CodeQuest Bot"
+          git config user.email "bot@codequest.dev"
+          git add README.md identity.json
+          git diff --staged --quiet || (git commit -m "🤖 Auto-update: AI feedback + progress" && git push)
+
+      - name: 📊 Show result
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          echo "✅ Feedback written to README.md (## AI Feedback section)"
+          grep -A 10 "^## AI Feedback" README.md | head -12 || echo "No AI Feedback section found"
+
+      - name: 🎯 Mission Status
+        if: steps.check.outputs.skip != 'true'
+        run: |
+          if [ -f identity.json ]; then
+            XP=$(grep -o '"xp": [0-9]*' identity.json | cut -d' ' -f2)
+            echo "✅ Current XP: $XP"
+          fi

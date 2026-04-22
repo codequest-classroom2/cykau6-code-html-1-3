@@ -1,0 +1,8 @@
+{
+  "username": "{{student_username}}",
+  "name": "{{student_name}}",
+  "xp": 0,
+  "badges": [],
+  "completedMissions": [],
+  "currentMission": "{{mission_id}}"
+}
